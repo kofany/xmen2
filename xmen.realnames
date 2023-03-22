@@ -1,0 +1,26 @@
+// xmen.realnames
+string xrealnames[] = {
+	// Despite all my rage...
+	{0, 22, 102, 48, 11},
+	// Love is suicide!
+	{0, 16, 119, 111, 7},
+	// It's the little things that kill
+	{0, 32, 17, 56, 5},
+	// Just ask me!
+	{0, 12, 102, 104, 7},
+	// What did you expect to read here?
+	{0, 33, 89, 19, 7},
+	// Born 2 b wild
+	{0, 13, 102, 87, 5},
+	// This confusion is my illusion
+	{0, 29, 102, 69, 11},
+	// Tell me, tell me, what's wrong with me
+	{0, 38, 119, 55, 13},
+	// I can't wait 'til I'm stronger
+	{0, 30, 113, 12, 13},
+	// Driven by hate, consumed by fear
+	{0, 32, 102, 46, 13},
+	// Army of Me.
+	{0, 11, 102, 40, 5},
+};
+const float lxrealnames = 11.0;

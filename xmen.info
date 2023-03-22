@@ -1,0 +1,20 @@
+// xmen.info
+string xinfo[] = {
+	// X-Men
+	{0, 5, 17, 51, 5},
+	// 0.9.4
+	{0, 5, 119, 61, 7},
+	// Maciek Freudenheim
+	{0, 18, 113, 74, 5},
+	// fahren@bochnia.pl
+	{0, 17, 17, 4, 5},
+	// Maurycy Paw³owski
+	{0, 17, 102, 244, 7},
+	// maurycy@bofh.szczecin.pl
+	{0, 24, 113, 38, 17},
+	// Micha³ Lebiecki
+	{0, 15, 102, 251, 13},
+	// mike@from.poznan.pl
+	{0, 19, 17, 68, 13},
+};
+const float lxinfo = 8.0;

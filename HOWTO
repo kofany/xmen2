@@ -1,0 +1,151 @@
+$Id: xmen-howto,v 1.5 02/10/29 15:38:38 fahren Exp $
+// Tak, wiem, ze to howto jest lol'owate - ale w koncu nie jest dla mnie :>
+
+1. Podstawy.
+ - w walkach na jednym ircserwerze wygrywaja te klony, ktore zostaly
+   zaladowane na koncu, z racji tego, ze ircserw czyta z sockow
+   od tylu, czyli po daniu mode +oo klon inny_klon pierwszenstwo
+   bedzie mial zawsze ten, ktory zostal zaladowany pozniej.
+ - nie zawsze najlepiej jest ladowac klony na ten ircserw, do ktorego
+   beda miec najmniejsze lagi - z racji tego, ze ircd najpierw czyta
+   i flushuje dane od innych ircserwow, a dopiero potem od swoich 
+   klientow -- czyli w wypadku naszych klonow, moze sie zdazyc sytuacja,
+   ze bot z jakiegos kompletnie niezlagowanego ircserwa zdazy zareagowac
+   zanim nasz ircserw, z ktorego mamy zaladowane klony, przeczyta od nich
+   wogole 'mode +oo' - wiec przed jakas wazna akcja najlepiej wybadac
+   na jakims szybkim, malutkim botnecie, z ktorego ircserwa boty
+   reaguja przed klonami i wlasnie z tego zaladowac klony :)
+ - jeszcze to powtorze nizej, ale przed .join na #kanal dajemy zawsze
+   .ping, tak samo przed kazda wazniejsza akcja
+ - jesli mozna, to po joinie odczekac jakies 3 sekundy (join laguje klony)
+ - nigdy nie opowac drugiego klona z listy .first (czyli drugiego, jaki
+   wejdzie na kanal). on wysyla WHO do ircserwa, przez co jak dostanie opa
+   to nie zrobi pelnego +oo +ooo; podobna sytuacja z 1-ym, 3-cim, 4 i 5-tym
+   klonem - one sla MODE, MODE b, MODE I i MODE e; wiec najlepiej po prostu
+   opowac od 6-tego klona wzwyz (z listy w .first)
+ - opujacy powinien byc z ircserwa, z ktorego klony sa zaladowane - 
+   wtedy (nie liczac tego, co napisalem w punkcie powyzej) klony na 100%
+   wezma kanal na tym ircserwie, z ktorego sa zaladowane, ale jak 
+   bedzie chociaz maly lag i sie nie zdaza wybic z pierwszym +oo to mamy
+   desynch :/ natomiast szansa na desynch jest mniejsza, gdy opujacy
+   jest z innego ircserwa niz klony, ale wtedy zeby klonom sie udalo
+   wybic z pierwszym +oo to nie wystarczy dac +ooo czy nawet +oo\n+ooo -
+   opujacych w tym wypadku powinno byc dwoch: pierwszy daje +ooo, najlepiej
+   na jakies zlagowane klony (jakies ostatnie z listy podanej w .info all),
+   te klony na 100% zostana wykopane przez boty z ircserwa, na ktorym jest
+   opujacy (bo klony w tym wypadku mamy zaladowane z innego ircserwa - 
+   najprawdopodobniej klony po prostu zobacza mode +ooo i kick na nie od razu),
+   natomiast drugi opujacy daje +oo\n+ooo albo nawet +ooo na nasze najmniej
+   zlagowane klony - boty z ircserwa opujacego juz nie powinny ich zdazyc
+   wykopac.. a wtedy kanal powinien slicznie pojsc bez desynchu.
+ - tym co napisalem powyzej nie nalezy sie tak przejmowac :> bez lagow powinno
+   sie ladnie udawac opowanie klonow sesja z tego samego ircserwa co sa klony,
+   po prostu przed kazdym waznym take'em pasuje zrobic test na jakis szybki, maly
+   botnet (wiem, wiem - powtarzam sie)
+ - dla osob doszukujacych sie joina z delayem: nie ma go i nie bedzie z prostego
+   powodu: przydaje sie on tylko jesli na kanale jest +l a jesli jest +l to ladnie
+   invitujemy sobie wszystkie klony przed daniem .join na kanal (invite bije +l)
+   i mass join wszystkimi :>
+ - co lepsze - kicki czy deopy? kicki wygladaja bardziej l33t i eleminuja o jedna
+   osobe wiecej niz deopy w prawie kazdym przypadku, wiec sa ustawione jako default
+   mode; pewnie jest pare sytuacji gdzie deopy beda lepsze (zalezne od ilosci 
+   klonow/osob do wywalenia), wiec zawsze mozna im zmienic mode na deop'a (.deop)
+ - klony mozna uruchamiac z parametrem '-d' - powoduje on skasowanie binarki od
+   razu po uruchomieniu, przydatne, jak sie laduje je z jakichs insecure shelli;
+ - moze to nie jest oczywiste dla wszystkich, wiec napisze: klony ladowane przez
+   bnc sa duzo wolniejsze od normalnych! :>
+
+2. Polecenia.
+ Liste wszystkich polecen mamy po wpisaniu 'help', wiecej info
+ o kazdym poleceniu powinnismy otrzymac po wpisaniu nazwy polecenia
+ bez zadnych argumentow, np 'load'.
+ Polecenia mozna zaczynac od '.' albo '/' lub po prostu bez niczego.
+ (czyli '.cycle' == '/cycle' == 'cycle').
+ Wiekszosc polecen ma porobione aliasy, np. '.join' = '.j', '.friend' = '.f',
+ '.info all' = '.i a', '.vhost list' = '.vh l' itd.
+ Krotki opis chyba wszystkiego:
+ 
+ delay      -  wyswietla aktualny czas lub zmienia opoznienie co ile klony beda
+               sie laczyc do ircserwa; nie moze byc on mniejszy od 1 sekundy
+ load       -  w argumentach ircserwa wystarczy raz podac, potem jak sie chce 
+               doladowac jakies klony to styka samo .load liczba
+ first <x>  -  pokazuje <x> klonow, posortowanych wg kolejnosci
+               polaczenia sie do ircserwa, albo, po daniu .ping
+	       wg laga.
+ info       -  wyswietla informacje o ustawieniach/kanalach,
+               przyjmuje argument 'all', ktory powoduje wyswietlenie
+	       bardziej szczegolowych danych.
+ log        -  logowanie wszystkiego co sie dzieje na ircu i wydawanych
+               polecen klonom, jako parametr przyjmuje nazwe pliku, wylaczyc
+	       mozna za pomoca .log close
+ raw        -  powoduje, ze kazdy z klonow wysle to co sie poda 
+               w argumencie do ircserwa, chyba, ze jako pierwszy argument
+	       bedzie -nick_klona, wtedy tylko jeden klon (tak, wlasnie
+	       ten z nickiem nick_klona) wysle (like. raw -dupa QUIT)
+ join/part  -  przed nazwa kanalow mozna podac ile klonow ma joinac/wyjsc
+ part/cycle -  jesli klony maja opa to wyjda z kanalu wykopujac sie, 
+               zabiera im to mniej pp, wiec jest 'lepsze', aczkolwiek jakby
+	       to komus przeszkadzalo to moze uzyc 'npart' albo 'ncycle' -
+	       wtedy wyjda PART'em. 
+ ping       -  warto robic co jakis czas, najlepiej przed wejsciem na kanal,
+               da nam informacje o tym jak klony sa zlagowane i posortuje je
+	       w roznych listach wg laga, przez co najpierw beda opowane te
+	       z najmniejszym lagiem itd.
+ friend     -  przyjmuje 3 argumenty: list, add albo del; list albo listuje
+               globalne friendy albo tylko z kanalu podanego w kolejnym argumencie,
+	       add i del dodaje/usuwa podane maski (mozna podac wiele w jednym .f add)
+	       przy czym del umie usuwac maski po numerach uzyskanych z .f list,
+	       .f a -all #kanal powoduje dodanie kazdego kto siedzi na #kanal do globalnej
+	       friendlisty, .f d -all usuwa cala friendliste itd itp.
+	       a - i jak sie poda samego nicka przy add/del, a osoba z takim nickiem bedzie
+	       sie znajdowac, na ktoryms z kanalow, na ktorym klony siedza to zostanie wpisana
+	       do userlisty jako *!user@host -- a jesli sie nie bedzie znajdowac, to jako 
+	       nick!*@*
+ bnc        -  ustawienie tego powoduje, ze klony beda sie ladowac poprzez bnc, jak chcemy
+               zeby korzystaly z jakis vhostow to musimy je podac w .vh
+ vh         -  parametry identyczne jak w .friend z tym, ze nie ma .vhost oraz, jesli chcemy
+               sie szybko pozbyc wszystkich vhostow i zamiast ich wpisac np. jednego to robimy
+	       .vh <ten jeden vhost> - jest to analogiczne do .vh add <vhost>, z tym, ze przed
+	       dodaniem <vhost> usunie nam wszystkie aktualnie dodane. Jesli chcemy dodac vhosty
+	       do ladowania poprzez bnc to NAJPIERW robimy .bnc POTEM .vh, inaczej .vh bedzie
+	       nam probowal resolwowac wszystkie vhosty jakie chcemy dodac, co moze trwac wieki.
+	       Z interesujacych rzeczy mamy jeszcze .vh scan, co powoduje znalezienie wszystkich
+	       vhostow na lokalnym hoscie, oraz to, ze .vh add czy samo .vh moze przyjmowac
+	       w argumentach zakresy ipkow w postaci: aa.bb.cc.dd-ee (wiem, ze lol), czyli mozna
+	       zrobic np. .vh a 192.168.24.1-50 192.168.24.70-99
+ mode, say  -  i inne polecenia tego typu jak np 'topic' jesli nie dostana w pierwszym argumencie 
+               kanalu, na ktorym maja wykonac akcje to wykonaja ja na ostatnim kanale na ktory klony
+	       weszly.
+ inv        -  zaprasza podane nicki na kanal/wszystkie kanaly	       
+ clean      -  zdejmuje wszystkie +bIe z kanalu
+ nick       -  z argumentem '-crap', zmienia nicki klonom na 'crapowate', czyli w stylu {}[]\;
+               z '-rand' na podobne, jakie sa generowane w trakcie laczenia klonow do ircserw;
+	       z '-set' na nicki wg maski podanej w nastepnym argumencie; maska ta musi zawierac
+	       albo '?', albo jakas ilosc '#' - za '?' dla kazdego klona jest wstawiany jakis
+	       losowy znaczek, natomiast za '#' "numer" klona w liscie, numer ten jest tylu cyfrowy
+	       ile '#' podalismy, czyli np. ### == 001, ## = 01 itd.
+	       .nick z innymi argumentami niz wyzej podane probuje zmienic nicki klonom na wlasnie
+	       te podane w parametrach (np. nick ig0 sbitch lowkick)
+ kick/deop  -  i close/open, bez argumentu ustawiaja default clone mode, czyli po wejsciu na jakis
+               kanal wlasnie taki mode sie na nim ustawi (close to kick, z tym, ze po wykopaniu
+	       opow wywala od razu reszte kanalu i nie pozwala nikomu na kanal spoza friendow wejsc),
+	       natomiast z kanalem podanym w argumencie zmieniaja mode wlasnie na tym kanale;
+	       jest to jedyna mozliwosc zmiany typu akcji na kanale, na ktorym juz klony weszly.
+	       polecenia te przyjmuja tez parametr '-all' powodujacy zmiane ustawienia mode'a na
+	       wszystkich aktualnych kanalach.
+ rejoin     -  ilosc sekund co ile klony dobijaja sie do kanalu, na ktory nie moga wejsc, jesli w parametrach
+               damy 'del' to anuluje 'dobijanie' aktualne dobijania sie do kanalow wszystkim klonom
+ show/debug -  ustawia poziom komunikatow jaki moze byc wyswietlany, im wyzszy tym wiecej smieci
+               bedziemy widziec; ogolna zasada jest taka: 1 = prawie nic nie widzimy, 2 = glownie bledy
+	       przy wchodzeniu na kanal, 3 = wszystkie akcje jakie sie dzieja na kanalach w stylu 
+	       MODE/KICK itd, 4 = to samo co 3 z tym ze wiecej info o tworzeniu kanalu podaje i wyswietla 
+	       privmsg'i publiczne, 5 = wszystko to, czego klony nie parsuja od ircserwa, 6 = wyswietla po
+	       prostu wszystko co dostana od ircd. Na czas akcji tego nie wlaczac, jako ze te klony wylaczaja
+	       buforowanie stdout'a, wiec wyswietlanie duzej ilosci informacji w czasie brania kanalu napewno 
+	       ich nie przyspieszy :)
+ disco      -  killuje klony od konca, czyli jak sie w argumentach poda np. '3' to skilluje 3 najbardziej
+               zalagowane klony
+ flush      -  zabija klony, ktore czekaja w kolejce do polaczenia sie na ircserw
+               
+-- 
+Maciej Freudenheim <fahren@bochnia.pl>
