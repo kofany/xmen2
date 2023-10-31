@@ -14,7 +14,7 @@ struct string_t {
 
 #define XBSIZE_READ 4096
 #ifndef __FreeBSD__
-// #define _USE_POLL 	1
+// #define _USE_POLL 	1 a
 #endif
 
 #ifdef _USE_POLL
