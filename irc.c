@@ -20,7 +20,7 @@
  * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
+ * SUCH DAMAGE..
  *
  */
 
@@ -43,10 +43,10 @@
 
 int xcnt;
 xchan *chanroot;
-
+extern struct tm *tm_log;
 #include "hide.info"
 
-// hashU() zre¿niete z ksi±¿ki z algorytmami :>
+// hashU() zreÂ¿niete z ksiÂ±Â¿ki z algorytmami :>
 int hashU(char *v, int m)
 {
 	int h, a = 31415, b = 27183;
