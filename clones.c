@@ -46,7 +46,7 @@
 #include "parse.h"
 
 #include "hide.reasons"
-
+extern struct tm *tm_log;
 xmen	*root, *tail, *h_clone[XHASH_CLONE];
 int	xall, xsendint;
 
@@ -179,7 +179,7 @@ void kill_clone(xmen *c, int print)
 		}
 		cdel_printf("All clones has been killed.\n");
 		free(xconnect.ircserver);
-		xconnect.ircserver = 0;	// musimy od nowa w /load podaæ ircserver
+		xconnect.ircserver = 0;	// musimy od nowa w /load podaÃ¦ ircserver
 		xconnect.ircport = DEF_IRCPORT;
 	}
 	
