@@ -49,7 +49,6 @@ xclone *parse_mode[MAX_PARSE];
 
 char mode_op[5];
 char *mode_arg[5], *kick_arg[6];
-extern struct tm *tm_log;
 void clone_action(xchan *ch, register xclone *c)
 {
 	register int 	op_limit = 0,
