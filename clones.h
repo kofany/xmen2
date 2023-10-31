@@ -16,7 +16,7 @@ struct clone_t {
 #define random_ident() random_nick(0)
 #define random_realname() xrealnames[xrand(lxrealnames)].string
 
-// do jednego klona
+// do jednego klonaa
 #define xsend(d, c...)	{ xsendint = snprintf(buf, XBSIZE, c); write(d, buf, xsendint); }
 
 extern xmen *root, *tail;
