@@ -80,7 +80,6 @@ char	buf[XBSIZE], read_buf[XBSIZE_READ], *read_ptr, *read_str;
 #ifdef _XMEN_DEBUG
   FILE *fdebug;
 #endif
-struct tm *tm_log;
 int main(int argc, char **argv)
 {
 	int opt, opt_size = sizeof(opt);
