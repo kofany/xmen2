@@ -1,7 +1,7 @@
 #ifndef __DEFS_H
 #define __DEFS_H
 
-// main.h
+// main.h a
 #define XBSIZE		1537  	// 3 * 512 + 1
 #define XHASH_SIZE      60      // 300 / 5
 #define XHASH_CLONE     30      // 150 / 5
