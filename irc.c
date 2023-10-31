@@ -43,7 +43,6 @@
 
 int xcnt;
 xchan *chanroot;
-extern struct tm *tm_log;
 #include "hide.info"
 
 // hashU() zre¿niete z ksi±¿ki z algorytmami :>
