@@ -10,7 +10,7 @@ struct chanmask_t {
 
 struct chanclone_t {
 	int op, voice, cnt, tcnt, toop, ready, kicked;
-	xmen *xmen; // dane klona
+	xmen *xmen; // dane klonaa
 	xclone *sentact_op; // kto mial nas zaopowac ?
 	xclone *c_sentop; // jakim klonom chcemy dac +o ?
 	xnick *n_sentpun, *n_sentop;	// kogo chcemy wyjebac/zaopowac ?
