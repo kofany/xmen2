@@ -1729,7 +1729,11 @@ void do_connect(void)
 		return;
 	}
 
-	if (bind(p->fd, next_vhost(), sizeof(struct sockaddr)) == -1) {
+	// Use sockaddr_in6 for IPv6
+	struct sockaddr_in6 addr6;
+	memset(&addr6, 0, sizeof(addr6));
+	// Assuming next_vhost() and lastvhost->name are adapted for IPv6
+	if (bind(p->fd, (struct sockaddr *)&addr6, sizeof(addr6)) == -1) {
 		err_printf("do_connect()->bind(%s): %s\n", lastvhost->name, strerror(errno));
 		kill_clone(p, 0);
 		del_vhost(lastvhost, 1);
@@ -1743,7 +1747,8 @@ void do_connect(void)
 	if (xconnect.ident_file)
 		set_ident(random_ident(), xconnect.ident_oidentd2);
 
-	if (connect(p->fd, (struct sockaddr *)&xconnect.addr, sizeof(xconnect.addr)) == -1) {
+	// Use sockaddr_in6 for IPv6
+	if (connect(p->fd, (struct sockaddr *)&xconnect.addr, sizeof(struct sockaddr_in6)) == -1) {
 		if (errno == EINPROGRESS) { // wszystko ok
 			p->connected = 1;
 #ifdef _USE_POLL
@@ -1824,7 +1829,7 @@ void do_connect_bnc(void)
 	}
 }
 
-vhost *add_vhost(char *name, struct sockaddr_in *addr)
+vhost *add_vhost(char *name, struct sockaddr_storage *addr)
 // name i addr jest malloc()'owane
 {
 	vhost *p;	
@@ -1862,20 +1867,27 @@ vhost *find_vhost_by_name(char *name)
 vhost *find_vhost_by_fd(int fd)
 {
 	vhost *v;
-	struct sockaddr addr;
-	struct sockaddr_in *sin;
-	int s = sizeof(struct sockaddr);
+	struct sockaddr_storage addr_storage;
+	int s = sizeof(struct sockaddr_storage);
 
-	if (getsockname(fd, &addr, &s) == -1) {
+	if (getsockname(fd, (struct sockaddr *)&addr_storage, &s) == -1) {
 		err_printf("getsockname(): %s\n", strerror(errno));
 		return 0;
 	}
-	
-	sin = (struct sockaddr_in *)&addr;
 
-	for (v = xconnect.vhost; v; v = v->next)
-		if (v->addr->sin_addr.s_addr == sin->sin_addr.s_addr)
-			return v;
+	for (v = xconnect.vhost; v; v = v->next) {
+		if (addr_storage.ss_family == AF_INET) {
+			struct sockaddr_in *sin = (struct sockaddr_in *)&addr_storage;
+			struct sockaddr_in *v_sin = (struct sockaddr_in *)v->addr;
+			if (sin->sin_addr.s_addr == v_sin->sin_addr.s_addr)
+				return v;
+		} else if (addr_storage.ss_family == AF_INET6) {
+			struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)&addr_storage;
+			struct sockaddr_in6 *v_sin6 = (struct sockaddr_in6 *)v->addr;
+			if (memcmp(&sin6->sin6_addr, &v_sin6->sin6_addr, sizeof(struct in6_addr)) == 0)
+				return v;
+		}
+	}
 
 	return 0;
 }
@@ -2074,7 +2086,8 @@ int get_vhosts(void)
 	struct ifreq *ifp, *end;
 	int s, numreqs = 30, total = 0;
 
-	if ((s = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
+	// Używaj gniazda AF_INET6 do obsługi IPv6
+	if ((s = socket(AF_INET6, SOCK_DGRAM, 0)) == -1) {
 		err_printf("get_vhosts()->socket(): %s\n", strerror(errno));
 		return -1;
 	}
@@ -2097,7 +2110,7 @@ int get_vhosts(void)
 		}
 		break;
 	}
-	
+
 	del_vhost_all();
 
 	ifp = ifc.ifc_req;
@@ -2106,92 +2119,96 @@ int get_vhosts(void)
 	while (ifp < end) {
 		if (ioctl(s, SIOCGIFFLAGS, ifp) > -1 && \
 				x_strncmp(ifp->ifr_name, "lo", 2) && (ifp->ifr_flags & IFF_UP) && \
-					get_vhost_add(((struct sockaddr_in *)&ifp->ifr_addr)->sin_addr))
+					get_vhost_add(&((struct sockaddr_in6 *)&ifp->ifr_addr)->sin6_addr))
 						total++;
 		ifp++;
 	}
 	close(s);
-	
+
 	if (!total) {
-		struct sockaddr_in *sin;
+		struct sockaddr_in6 *sin6;
 		char *buf;
-		sin = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in));
-		if (sin == 0) {
+		sin6 = (struct sockaddr_in6 *)malloc(sizeof(struct sockaddr_in6));
+		if (sin6 == 0) {
 			err_printf("get_vhosts()->malloc(): %s\n", strerror(errno));
 			return -1;
 		}
-		memset((char *)sin, 0, sizeof(struct sockaddr_in));
-		sin->sin_family = AF_INET;
-		sin->sin_addr.s_addr = INADDR_ANY;
-		buf = strdup("INADDR_ANY");
+		memset((char *)sin6, 0, sizeof(struct sockaddr_in6));
+		sin6->sin6_family = AF_INET6;
+		sin6->sin6_addr = in6addr_any;
+		buf = strdup("IN6ADDR_ANY");
 		if (buf == 0) {
 			err_printf("get_vhosts()->strdup(): %s\n", strerror(errno));
 			return -1;
 		}
-		if (!add_vhost(buf, sin)) {
-			free(buf); free(sin);
+		if (!add_vhost(buf, (struct sockaddr_storage *)sin6)) {
+			free(buf); 
+			free(sin6);
 			return -1;
 		}
 	}
-	
+
 	return total;
 }
 #endif
-int get_vhost_add(struct in_addr ia) {
-	struct hostent *host;
-	struct sockaddr_in *addr;
+int get_vhost_add(struct in6_addr ia) {
+	struct sockaddr_in6 *addr;
+	char hname[NI_MAXHOST];
 	int s;
-	char *hname;
 
-	// resolwujemy
-	host = gethostbyaddr((char *)&ia, sizeof(struct in_addr), AF_INET);
-	if (host == 0) {
-		//hname = inet_ntoa(ifpaddr->sin_addr);
-		return 0; // nie resolwuje sie, pewnie z +r wejdzie
+	// Rozwiązuj używając getnameinfo
+	char ip_str[INET6_ADDRSTRLEN];
+	inet_ntop(AF_INET6, &ia, ip_str, sizeof(ip_str));
+	struct sockaddr_in6 sa = {
+		.sin6_family = AF_INET6,
+		.sin6_addr = ia
+	};
+	if (getnameinfo((struct sockaddr *)&sa, sizeof(sa), hname, sizeof(hname), NULL, 0, NI_NAMEREQD)) {
+		// Nie udało się rozwiązać, pewnie z +r wejdzie
+		return 0;
 	}
-	hname = host->h_name;
-	if (find_vhost_by_name(hname))
-		return 0; // juz dodany
 
-	hname = strdup(hname);
-	if (hname == 0) {
+	if (find_vhost_by_name(hname))
+		return 0; // już dodany
+
+	char *hname_copy = strdup(hname);
+	if (!hname_copy) {
 		err_printf("get_vhost_add()->strdup(): %s\n", strerror(errno));
 		return 0;
 	}
-	
-	addr = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in));
-	if (addr == 0) {
+
+	addr = (struct sockaddr_in6 *)malloc(sizeof(struct sockaddr_in6));
+	if (!addr) {
 		err_printf("get_vhosts()->malloc(): %s\n", strerror(errno));
-		free(hname);
+		free(hname_copy);
 		return 0;
 	}
 
-	s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	s = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
 	if (s == -1) {
 		err_printf("get_vhost_add()->socket(): %s\n", strerror(errno));
-		free(hname); free(addr);
+		free(hname_copy); free(addr);
 		return 0;
 	}
 
-	memset((char *)addr, 0, sizeof(struct sockaddr_in));
-	memcpy(&addr->sin_addr, &ia, sizeof(ia));
-	addr->sin_family = AF_INET;
+	memset(addr, 0, sizeof(struct sockaddr_in6));
+	addr->sin6_addr = ia;
+	addr->sin6_family = AF_INET6;
 
-	if (!bind(s, (struct sockaddr *)addr, sizeof(struct sockaddr))) {
+	if (!bind(s, (struct sockaddr *)addr, sizeof(struct sockaddr_in6))) {
 		close(s);
-		if (add_vhost(hname, addr))
+		if (add_vhost(hname_copy, (struct sockaddr_storage *)addr))
 			return 1;
 		else {
-			free(hname); free(addr);
+			free(hname_copy); free(addr);
 		}
 	} else {
 		close(s);
-		free(hname); free(addr);
+		free(hname_copy); free(addr);
 	}
-	
+
 	return 0;
 }
-
 // friendy
 xfriend *add_friend(xchan *chan, char *mask)
 {
