@@ -1,6 +1,6 @@
 #ifndef __PARSE_H
 #define __PARSE_H
-
+// a
 extern xmen *ping, *pingtail;
 extern int xpingreplies;
 extern xclone *pobs;
