@@ -62,7 +62,7 @@ int	hsock,
 	read_last,
 	debuglvl;
 /* debug:
- * 1 = komunikaty o klonach jak ³adowanie, zsychnowanie kana³u
+ * 1 = komunikaty o klonach jak Â³adowanie, zsychnowanie kanaÂ³u
  * 2 = bardziej upierdliwe komunikaty jak killowanie, tworzenie #
  * 3 = chanmode'y
  * 4 = bardziej upierdliwe chanmode'y jak publiczne PRIVMSG'i
@@ -80,7 +80,7 @@ char	buf[XBSIZE], read_buf[XBSIZE_READ], *read_ptr, *read_str;
 #ifdef _XMEN_DEBUG
   FILE *fdebug;
 #endif
-
+struct tm *tm_log;
 int main(int argc, char **argv)
 {
 	int opt, opt_size = sizeof(opt);
@@ -96,7 +96,7 @@ int main(int argc, char **argv)
 	if (argc > 1 && !x_strcasecmp(*(argv+1), "-d"))
 		unlink(*argv);
 	
-	// g³upie czytanie z stdin'a
+	// gÂ³upie czytanie z stdin'a
 //	tcgetattr(0, &tio);
 //	tio.c_lflag &= ~ICANON;
 //	tcsetattr(0, TCSANOW, &tio);
@@ -157,7 +157,7 @@ int main(int argc, char **argv)
 	xconnect.ircport = DEF_IRCPORT;
 	xconnect.delay = 2;
 
-	// info o programie, wygl±da gejowsko =)
+	// info o programie, wyglÂ±da gejowsko =)
 //	printf("\n%s%s v%s%s%s (c) %s <%s%s%s>%s\n\n", COLOR_CYAN, xinfo[0].string, COLOR_LCYAN,
 //			xinfo[1].string, COLOR_CYAN, xinfo[2].string, COLOR_LCYAN,
 //			xinfo[3].string, COLOR_CYAN, COLOR_NORMAL);
@@ -355,7 +355,7 @@ int main(int argc, char **argv)
 					err_printf("connect(): %s\n", strerror(opt));
 					kill_clone(p, 1);
 					delete_connect_all();
-				} else {	// connect() przeszed³ bez b³êdów
+				} else {	// connect() przeszedÂ³ bez bÂ³ÃªdÃ³w
 #ifdef _XMEN_DEBUG
 					fprintf(fdebug, "+ Clone %s connect()'ed, sending NICK + USER (xcnt=%d, xall=%d, xcon=%d)\n", p->nick, xcnt, xall, xconnect.connecting);
 #endif
@@ -427,7 +427,7 @@ void xmen_exit(int status)
 		free(xconnect.log_file);
 	}
 	
-	// czy¶cimy xconnect -- po co? nie wiem :)
+	// czyÂ¶cimy xconnect -- po co? nie wiem :)
 	free(xconnect.ircserver);
 	del_vhost_all();
 	if (xconnect.ident_file) {
@@ -639,7 +639,7 @@ char *newsplit(char **rest)
 	return r;
 }
 
-/* modyfikacja pozwalaj±ca wyci±æ interesuj±ce nas s³owo */
+/* modyfikacja pozwalajÂ±ca wyciÂ±Ã¦ interesujÂ±ce nas sÂ³owo */
 
 char *xnewsplit(int word, char **rest)
 {
