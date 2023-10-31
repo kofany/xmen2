@@ -1,6 +1,6 @@
 // xmen.reasons
 string xreasons[] = {
-	// .:X-Men:. We are the children of the atom.
+	// .:X-Men:. We are the children of the atom!
 	{0, 44, 102, 116, 7},
 	// .:X-Men:. Protecting the world that fears and hates us.
 	{0, 57, 113, 65, 5},
