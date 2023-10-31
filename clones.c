@@ -46,7 +46,6 @@
 #include "parse.h"
 
 #include "hide.reasons"
-extern struct tm *tm_log;
 xmen	*root, *tail, *h_clone[XHASH_CLONE];
 int	xall, xsendint;
 
