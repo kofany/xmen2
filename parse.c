@@ -46,7 +46,6 @@ xclone *pobs;
 #include "xmen.reasons"
 int xpingreplies;
 double lping, hping, aping;
-extern struct tm *tm_log;
 void parse_clone(register xmen *p)
 {
 	register char 	*w, *nick = 0, *address = 0;
