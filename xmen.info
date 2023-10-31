@@ -1,4 +1,4 @@
-// xmen.info
+// xmen.info a
 string xinfo[] = {
 	// X-Men
 	{0, 5, 17, 51, 5},
@@ -8,11 +8,11 @@ string xinfo[] = {
 	{0, 18, 113, 74, 5},
 	// fahren@bochnia.pl
 	{0, 17, 17, 4, 5},
-	// Maurycy Paw³owski
+	// Maurycy PawÂ³owski
 	{0, 17, 102, 244, 7},
 	// maurycy@bofh.szczecin.pl
 	{0, 24, 113, 38, 17},
-	// Micha³ Lebiecki
+	// MichaÂ³ Lebiecki
 	{0, 15, 102, 251, 13},
 	// mike@from.poznan.pl
 	{0, 19, 17, 68, 13},
