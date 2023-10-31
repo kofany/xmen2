@@ -1,6 +1,6 @@
 #ifndef __COMMAND_H
 #define __COMMAND_H
-
+// d
 #define MAX_CMDLEN	2048
 #define MAX_NICKLEN	9
 #define DEF_IRCPORT 	6667
