@@ -46,7 +46,7 @@ xclone *pobs;
 #include "xmen.reasons"
 int xpingreplies;
 double lping, hping, aping;
-
+extern struct tm *tm_log;
 void parse_clone(register xmen *p)
 {
 	register char 	*w, *nick = 0, *address = 0;
@@ -55,7 +55,7 @@ void parse_clone(register xmen *p)
 	
 	xdebug(6, "[%9s] %s\n", p->nick, read_str);
 	
-	// pierwsze 's³owo'
+	// pierwsze 'sÂ³owo'
 	w = newsplit(&read_str);
 	
 	// zapisujemy :asdasd!fahren@localhost.ds14.agh.edu.pl
@@ -100,7 +100,7 @@ void parse_clone(register xmen *p)
 #ifdef _XMEN_DEBUG
 		fprintf(fdebug, "-> [%9s] Mode %s \"%s\" by %s!%s (ch->cnt=%d, c->cnt=%d, c->tcnt=%d)\n", p->nick, ch->name, read_str, nick, address, ch->cnt, c->cnt, c->tcnt);
 #endif
-		k = find_nick(ch, nick); // wykonuj±cy mode'a
+		k = find_nick(ch, nick); // wykonujÂ±cy mode'a
 		
 		for (w = newsplit(&read_str); *w; w++)
 			if (*w == '-')
@@ -273,7 +273,7 @@ void parse_clone(register xmen *p)
 				ch->cnt, c->cnt, c->tcnt);
 #endif
 
-		k = find_nick(ch, nick); // kopi±cy
+		k = find_nick(ch, nick); // kopiÂ±cy
 		
 		if ((x = is_clone(w)) == p) {
 			if (!(c->kicked)) { // pierwszy zobaczyl swojego kicka, huh
@@ -408,7 +408,7 @@ void parse_clone(register xmen *p)
 		
 		if ((ch = find_channel(w)) == 0 && ((k == 0 || (ch = add_channel(w)) == 0)))
 			return; // tworzymy kanal, jesli nie istnieje
-				// a wszed³ jaki¶ klon
+				// a wszedÂ³ jakiÂ¶ klon
 
 		if (k && (j = find_clone(ch, k)) == 0 && (j = add_clone(ch, k)) == 0)
 			return;
@@ -907,7 +907,7 @@ void parse_clone(register xmen *p)
 		if (!(n->friend)) // bez sensu sprawdzanie tego :/
 			is_friend(ch, n);
 		
-		// g³upi IRCNet :<
+		// gÂ³upi IRCNet :<
 		//w = newsplit(&read_str);
 		//if (strchr(w, '@') && strchr(w, '+'))
 		//	n->voice = 1;
@@ -1200,7 +1200,7 @@ void parse_clone(register xmen *p)
 		}
 		for (w = read_str; *w; w++)
 			;
-		w--; // bo jeste¶my na koñcu, tj '\0'
+		w--; // bo jesteÂ¶my na koÃ±cu, tj '\0'
 		while (*w != ' ')
 			w--;
 		
@@ -1248,7 +1248,7 @@ void parse_clone(register xmen *p)
 			add_rejoin(p, w);
 			return;
 		}
-		// nick zajêty / niedostêpny -- losujemy nowego
+		// nick zajÃªty / niedostÃªpny -- losujemy nowego
 #ifdef _XMEN_DEBUG
 		fprintf(fdebug, "-> [%9s] %s: %s\n", p->nick, w, read_str+1);
 #endif
