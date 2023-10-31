@@ -65,7 +65,6 @@ xaddress xconnect;
 vhost *lastvhost;
 xfriend *friendroot;
 struct timeval tv_ping, tv_log;
-struct tm *tm_log;
 double cping;
 char nick_buf[MAX_NICKLEN+1];
 int def_takemode, xlastjoin, xrejointimer, xrejoindelay;
