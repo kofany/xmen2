@@ -36,7 +36,7 @@ char *info[] = {
 	"fahren@bochnia.pl",
 	"Maurycy Paw³owski",
 	"maurycy@bofh.szczecin.pl",
-	"Micha³ Lebiecki",
+	"Michał Lebiecki",
 	"mike@from.poznan.pl",
 	"\0",
 };
