@@ -147,17 +147,18 @@ void parse_input(void)
 					return;
 				}
 				if (!xconnect.bncserver) {
-					if ((host = gethostbyname(w)) == 0) {
-						err_printf("gethostbyname(%s): %s\n",
-								w, hstrerror(errno));
-						free(xconnect.ircserver);
-						xconnect.ircserver = 0;
-						return;
+					struct addrinfo hints = {0}, *res = 0; char portbuf[16];
+					hints.ai_socktype = SOCK_STREAM; hints.ai_family = AF_UNSPEC;
+					snprintf(portbuf, sizeof(portbuf), "%d", xconnect.ircport);
+					int gai = getaddrinfo(w, portbuf, &hints, &res);
+					if (gai != 0) {
+						err_printf("getaddrinfo(%s): %s\n", w, gai_strerror(gai));
+						free(xconnect.ircserver); xconnect.ircserver = 0; return;
 					}
-					memset((char *)&xconnect.addr, 0, sizeof(struct sockaddr_in));
-					memcpy(&xconnect.addr.sin_addr, host->h_addr, host->h_length);
-					xconnect.addr.sin_family	= host->h_addrtype;
-					xconnect.addr.sin_port		= htons(xconnect.ircport);
+					memset(&xconnect.addr, 0, sizeof(xconnect.addr));
+					memcpy(&xconnect.addr, res->ai_addr, res->ai_addrlen);
+					xconnect.addrlen = res->ai_addrlen;
+					freeaddrinfo(res);
 				}
 			}
 		} else if (xconnect.ircserver == 0) {
@@ -165,11 +166,22 @@ void parse_input(void)
 			return;
 		}
 
-		if (*cmd && (sscanf(cmd, "%d", &xconnect.ircport) == 1))
-			xconnect.addr.sin_port = htons(xconnect.ircport);
+		if (*cmd && (sscanf(cmd, "%d", &xconnect.ircport) == 1)) {
+			if (!xconnect.bncserver && xconnect.ircserver) {
+				struct addrinfo hints = {0}, *res = 0; char portbuf[16];
+				hints.ai_socktype = SOCK_STREAM; hints.ai_family = AF_UNSPEC;
+				snprintf(portbuf, sizeof(portbuf), "%d", xconnect.ircport);
+				int gai = getaddrinfo(xconnect.ircserver, portbuf, &hints, &res);
+				if (gai == 0) {
+					memset(&xconnect.addr, 0, sizeof(xconnect.addr));
+					memcpy(&xconnect.addr, res->ai_addr, res->ai_addrlen);
+					xconnect.addrlen = res->ai_addrlen;
+					freeaddrinfo(res);
+				}
+			}
+		}
 	
-		info_printf("Using ircserver: %s%s%s (%s)\n", COLOR_WHITE, xconnect.ircserver, COLOR_NORMAL,
-				xconnect.bncserver? "BNC" : inet_ntoa(xconnect.addr.sin_addr));
+		info_printf("Using ircserver: %s%s%s\n", COLOR_WHITE, xconnect.ircserver, COLOR_NORMAL);
 		info_printf("Using ircport  : %d\n", xconnect.ircport);
 		if (xconnect.bncserver) {
 			info_printf("Using bnc      : %s\n", xconnect.bncserver);	
@@ -185,7 +197,7 @@ void parse_input(void)
 	} else if (!x_strncasecmp(w, "bnc", 3)) {
 		if (*cmd) {
 			int new = 0;
-			struct hostent *host;
+			struct addrinfo hints = {0}, *res = 0; char portbuf[16];
 			
 			w = newsplit(&cmd);
 			if (!x_strcasecmp(w, "del") || !x_strcasecmp(w, "d")) {
@@ -215,24 +227,24 @@ void parse_input(void)
 				new = 1;
 		
 			if (!(xconnect.bncserver) || x_strcasecmp(xconnect.bncserver, w)) {
-				if ((host = gethostbyname(w)) == 0) {
-					err_printf("gethostbyname(%s): %s\n", w, hstrerror(errno));
-					return;
-				}
+				memset(&hints, 0, sizeof(hints)); hints.ai_socktype = SOCK_STREAM; hints.ai_family = AF_UNSPEC;
+				snprintf(portbuf, sizeof(portbuf), "%d", xconnect.ircport);
+				int gai = getaddrinfo(w, portbuf, &hints, &res);
+				if (gai != 0) { err_printf("getaddrinfo(%s): %s\n", w, gai_strerror(gai)); return; }
 				free(xconnect.bncserver);
 				xconnect.bncserver = strdup(w);
 				if (xconnect.bncserver == 0) {
 					err_printf("strdup(): %s\n", strerror(errno));
 					return;
 				}
-				memset((char *)&xconnect.bncaddr, 0, sizeof(struct sockaddr_in));
-				memcpy(&xconnect.bncaddr.sin_addr, host->h_addr, host->h_length);
-				xconnect.bncaddr.sin_family        = host->h_addrtype;
-				xconnect.bncaddr.sin_port          = htons(xconnect.ircport);
+				memset(&xconnect.bncaddr, 0, sizeof(xconnect.bncaddr));
+				memcpy(&xconnect.bncaddr, res->ai_addr, res->ai_addrlen);
+				xconnect.bncaddrlen = res->ai_addrlen;
+				freeaddrinfo(res);
 			}
 			
 			xconnect.bncport = atoi(newsplit(&cmd));
-			xconnect.bncaddr.sin_port = htons(xconnect.bncport);
+			if (xconnect.bncaddr.ss_family == AF_INET) ((struct sockaddr_in *)&xconnect.bncaddr)->sin_port = htons(xconnect.bncport); else if (xconnect.bncaddr.ss_family == AF_INET6) ((struct sockaddr_in6 *)&xconnect.bncaddr)->sin6_port = htons(xconnect.bncport);
 			free(xconnect.bncpass);
 			xconnect.bncpass = strdup(cmd);
 			if (xconnect.bncpass == 0) {
@@ -259,9 +271,8 @@ void parse_input(void)
 		} else {
 			if (xconnect.bncserver) {
 				info_printf("Current bnc settings:\n");
-				info_printf(" host      : %s%s%s (%s)\n",
-						COLOR_WHITE, xconnect.bncserver, COLOR_NORMAL,
-						inet_ntoa(xconnect.bncaddr.sin_addr));
+				info_printf(" host      : %s%s%s\n",
+						COLOR_WHITE, xconnect.bncserver, COLOR_NORMAL);
 				info_printf(" port      : %d\n", xconnect.bncport);
 				info_printf(" password  : %s\n", xconnect.bncpass);
 			} else {
@@ -298,8 +309,12 @@ void parse_input(void)
 				if (xconnect.bncserver) {
 					info_printf("%s%3d%s: %s\n", COLOR_WHITE, i+1, COLOR_NORMAL, v->name);
 				} else {
-					info_printf("%s%3d%s: %s (%s)\n", COLOR_WHITE, i+1, COLOR_NORMAL,
-						v->name, inet_ntoa(v->addr->sin_addr));
+					char hostbuf[NI_MAXHOST];
+					if (v->addr && getnameinfo((struct sockaddr *)v->addr, v->addrlen, hostbuf, sizeof(hostbuf), NULL, 0, NI_NUMERICHOST) == 0) {
+						info_printf("%s%3d%s: %s (%s)\n", COLOR_WHITE, i+1, COLOR_NORMAL, v->name, hostbuf);
+					} else {
+						info_printf("%s%3d%s: %s\n", COLOR_WHITE, i+1, COLOR_NORMAL, v->name);
+					}
 				}
 			}
 			return;
@@ -343,125 +358,78 @@ void parse_input(void)
 		while (1) {
 			if (w == 0 && (w = newsplit(&cmd)) == 0)
 				break;
-			if (isdigit(w[strlen(w)-1])) { // ip
-				from = w;
-				dots = 0;
-				while (*from) {
-					if (*from == '.')
-						dots++;
-					else if (*from == '-' && dots != 3)
-						break;
-					else if (*from != '-' && !isdigit(*from)) {
-						dots = 0;
-						break;
-					}
-					from++;
-				}
-				if (dots != 3) {
-					err_printf("Invalid ip: %s\n", w);
-					w = 0; continue;
-				}
-				from = strrchr(w, '.');
-				*from++ = 0;
-				if ((to = strchr(from, '-'))) {
-					*to++ = 0;
-					ifrom = atoi(from);
-					ito = atoi(to);
-				} else
-					ifrom = ito = atoi(from);
-			} else { // hostname
-				from = 0;
-				ifrom = ito = 0;
-			}
-				
-			iaddr.sin_family = AF_INET;
-			ito++;
-			while (ifrom < ito) {
-				dots = 0;
-				if (from == 0) { // hostname
-					ifrom++;
-					hname = w;
-					if (!(xconnect.bncserver)) {
-						if ((host = gethostbyname(w)) == 0) {
-							err_printf("gethostbyname(%s): %s\n",
-									w, hstrerror(errno));
-							continue;
-						}
-						hname = host->h_name;
-				 		memcpy(&iaddr.sin_addr, host->h_addr, host->h_length);
-					}
-				} else { // ip
-					snprintf(ipaddr, 16, "%s.%d", w, ifrom++);
-					hname = ipaddr;
-					if (!(xconnect.bncserver)) {
-						if (!inet_aton(ipaddr, &iaddr.sin_addr)) {
-							err_printf("inet_aton(%s): %s\n",
-								ipaddr, strerror(errno));
-							continue;
-						}
-						host = gethostbyaddr((char *)&iaddr.sin_addr, sizeof(struct in_addr), AF_INET);
-						if (host)
-							hname = host->h_name;
-					}
-				}
 
-				for (v = xconnect.vhost; v; v = v->next)
-					if (!x_strcasecmp(v->name, hname)) {
-						dots = 1;
-						break;
-					}
-				
-				if (dots == 1) {
-					cdel_printf("%s is already in vhosts list.\n", hname);
-					continue;
-				}
-				
-				hname = strdup(hname);
-				if (hname == 0) {
-					err_printf("strdup(): %s\n", strerror(errno));
-					return;
-				}
-				
-				if (xconnect.bncserver) {
-					if (add_vhost(hname, 0)) {
-						cadd_printf("Added %s to vhost list.\n", hname);
-						total++;
-					} else
-						free(hname);
-					continue;
-				}
-				
-				dots = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-				if (dots == -1) {
-					err_printf("socket(): %s\n", strerror(errno));
-					free(hname);
-					return;
-				}
-				
-				addr = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in));
-				if (addr == 0) {
-					err_printf("malloc(): %s\n", strerror(errno));
-					close(dots); free(hname);
-					return;
-				}
-				memset((char *)addr, 0, sizeof(struct sockaddr_in));
-				memcpy(&addr->sin_addr, &iaddr.sin_addr, sizeof(iaddr.sin_addr));
-				addr->sin_family = AF_INET;
-				if (bind(dots, (struct sockaddr *)addr, sizeof(struct sockaddr)) == 0) {
-					if (add_vhost(hname, addr)) {
-						cadd_printf("Added %s to vhost list.\n", hname);
-						total++;
-					} else {
-						close(dots);
-						free(hname); free(addr);
-						return;
-					}
-				} else {
-					cdel_printf("Couldn't bind to %s.\n", hname);
-					free(hname); free(addr);
-				}
-				close(dots);
+			// If BNC mode, we only store the name
+			if (xconnect.bncserver) {
+				for (v = xconnect.vhost, dots = 0; v; v = v->next)
+					if (!x_strcasecmp(v->name, w)) { dots = 1; break; }
+				if (dots) { cdel_printf("%s is already in vhosts list.\n", w); continue; }
+				hname = strdup(w);
+				if (!hname) { err_printf("strdup(): %s\n", strerror(errno)); return; }
+				if (add_vhost(hname, NULL, 0)) { cadd_printf("Added %s to vhost list.\n", hname); total++; }
+				else free(hname);
+				w = 0; continue;
 			}
+
+			// Try IPv4 range pattern a.b.c.d-e
+			char *dash = strchr(w, '-');
+			char *lastdot = strrchr(w, '.');
+			if (dash && lastdot && lastdot < dash) {
+				// IPv4 range
+				char base[64]; memset(base, 0, sizeof(base));
+				int prefixLen = (int)(lastdot - w);
+				if (prefixLen <= 0 || prefixLen >= (int)sizeof(base)) { cdel_printf("%s is not an IP address.\n", w); w = 0; continue; }
+				memcpy(base, w, prefixLen);
+				int start = atoi(lastdot + 1);
+				int end = atoi(dash + 1);
+				if (end < start) { int t = start; start = end; end = t; }
+				for (i = start; i <= end; i++) {
+					char ip[64]; snprintf(ip, sizeof(ip), "%s.%d", base, i);
+					struct addrinfo hints = {0}, *res = 0;
+					hints.ai_socktype = SOCK_STREAM; hints.ai_family = AF_INET; hints.ai_flags = AI_NUMERICHOST;
+					if (getaddrinfo(ip, NULL, &hints, &res) != 0) { continue; }
+					int sfd = socket(res->ai_family, SOCK_STREAM, IPPROTO_TCP);
+					if (sfd == -1) { freeaddrinfo(res); continue; }
+					if (res->ai_family == AF_INET) ((struct sockaddr_in *)res->ai_addr)->sin_port = 0;
+					int ok = (bind(sfd, res->ai_addr, res->ai_addrlen) == 0);
+					close(sfd);
+					if (!ok) { freeaddrinfo(res); continue; }
+					for (v = xconnect.vhost, dots = 0; v; v = v->next) if (!x_strcasecmp(v->name, ip)) { dots = 1; break; }
+					if (dots) { freeaddrinfo(res); continue; }
+					hname = strdup(ip);
+					if (!hname) { freeaddrinfo(res); err_printf("strdup(): %s\n", strerror(errno)); return; }
+					if (add_vhost(hname, res->ai_addr, res->ai_addrlen)) { cadd_printf("Added %s to vhost list.\n", hname); total++; }
+					else free(hname);
+					freeaddrinfo(res);
+				}
+				w = 0; continue;
+			}
+
+			// Generic: hostname or IPv4/IPv6 literal
+			struct addrinfo hints = {0}, *res0 = 0, *ai;
+			hints.ai_socktype = SOCK_STREAM; hints.ai_family = AF_UNSPEC;
+			int gai = getaddrinfo(w, NULL, &hints, &res0);
+			if (gai != 0) { cdel_printf("Unknown host %s.\n", w); w = 0; continue; }
+			for (ai = res0; ai; ai = ai->ai_next) {
+				if (ai->ai_family != AF_INET && ai->ai_family != AF_INET6) continue;
+				int sfd = socket(ai->ai_family, SOCK_STREAM, IPPROTO_TCP);
+				if (sfd == -1) continue;
+				if (ai->ai_family == AF_INET) ((struct sockaddr_in *)ai->ai_addr)->sin_port = 0; else ((struct sockaddr_in6 *)ai->ai_addr)->sin6_port = 0;
+				if (bind(sfd, ai->ai_addr, ai->ai_addrlen) != 0) { close(sfd); continue; }
+				close(sfd);
+				// Make a display name (numeric)
+				char hostbuf[NI_MAXHOST];
+				if (getnameinfo(ai->ai_addr, ai->ai_addrlen, hostbuf, sizeof(hostbuf), NULL, 0, NI_NUMERICHOST) != 0)
+					strncpy(hostbuf, w, sizeof(hostbuf)-1), hostbuf[sizeof(hostbuf)-1] = '\0';
+				for (v = xconnect.vhost, dots = 0; v; v = v->next)
+					if (!x_strcasecmp(v->name, hostbuf)) { dots = 1; break; }
+				if (dots) continue;
+				hname = strdup(hostbuf);
+				if (!hname) { freeaddrinfo(res0); err_printf("strdup(): %s\n", strerror(errno)); return; }
+				if (add_vhost(hname, ai->ai_addr, ai->ai_addrlen)) { cadd_printf("Added %s to vhost list.\n", hname); total++; }
+				else free(hname);
+			}
+			freeaddrinfo(res0);
 			w = 0;
 		}
 		if (total) {
@@ -561,8 +529,8 @@ void parse_input(void)
 				xinfo[1].string, COLOR_CYAN, xinfo[2].string, COLOR_LCYAN,
 				xinfo[3].string, COLOR_CYAN, COLOR_NORMAL);
 		if (xconnect.ircserver) {
-			info_printf("Using ircserver    : %s%s%s (%s)\n",
-				COLOR_WHITE, xconnect.ircserver, COLOR_NORMAL, xconnect.bncserver? "BNC" : inet_ntoa(xconnect.addr.sin_addr));
+			info_printf("Using ircserver    : %s%s%s\n",
+				COLOR_WHITE, xconnect.ircserver, COLOR_NORMAL);
 			info_printf("Using ircport      : %d\n", xconnect.ircport);
 		}
 		info_printf("Total of %s%d%s clones loaded (%d on IRC, %d connecting, %d delayed).\n",
@@ -1729,7 +1697,7 @@ void do_connect(void)
 		return;
 	}
 
-	if (bind(p->fd, next_vhost(), sizeof(struct sockaddr)) == -1) {
+	if (bind(p->fd, next_vhost(), lastvhost->addrlen) == -1) {
 		err_printf("do_connect()->bind(%s): %s\n", lastvhost->name, strerror(errno));
 		kill_clone(p, 0);
 		del_vhost(lastvhost, 1);
@@ -1743,7 +1711,7 @@ void do_connect(void)
 	if (xconnect.ident_file)
 		set_ident(random_ident(), xconnect.ident_oidentd2);
 
-	if (connect(p->fd, (struct sockaddr *)&xconnect.addr, sizeof(xconnect.addr)) == -1) {
+	if (connect(p->fd, (struct sockaddr *)&xconnect.addr, xconnect.addrlen) == -1) {
 		if (errno == EINPROGRESS) { // wszystko ok
 			p->connected = 1;
 #ifdef _USE_POLL
@@ -1792,7 +1760,7 @@ void do_connect_bnc(void)
 		return;
 	}
 
-	if (connect(p->fd, (struct sockaddr *)&xconnect.bncaddr, sizeof(xconnect.bncaddr)) == -1) {
+	if (connect(p->fd, (struct sockaddr *)&xconnect.bncaddr, xconnect.bncaddrlen) == -1) {
 		if (errno == EINPROGRESS) { // wszystko ok
 			p->connected = 1;
 #ifdef _USE_POLL
@@ -1824,7 +1792,7 @@ void do_connect_bnc(void)
 	}
 }
 
-vhost *add_vhost(char *name, struct sockaddr_in *addr)
+vhost *add_vhost(char *name, const struct sockaddr *addr, socklen_t addrlen)
 // name i addr jest malloc()'owane
 {
 	vhost *p;	
@@ -1845,7 +1813,13 @@ vhost *add_vhost(char *name, struct sockaddr_in *addr)
 	xconnect.vhosttail = p;
 	
 	p->name = name;
-	p->addr = addr;
+	if (addr) {
+		p->addr = (struct sockaddr_storage *)malloc(sizeof(struct sockaddr_storage));
+		if (!p->addr) { err_printf("add_vhost()->malloc(): %s\n", strerror(errno)); free(p->name); free(p); return 0; }
+		memset(p->addr, 0, sizeof(struct sockaddr_storage));
+		memcpy(p->addr, addr, addrlen);
+		p->addrlen = addrlen;
+	}
 	
 	return p;
 }
@@ -1862,21 +1836,14 @@ vhost *find_vhost_by_name(char *name)
 vhost *find_vhost_by_fd(int fd)
 {
 	vhost *v;
-	struct sockaddr addr;
-	struct sockaddr_in *sin;
-	int s = sizeof(struct sockaddr);
-
-	if (getsockname(fd, &addr, &s) == -1) {
+	struct sockaddr_storage addr; socklen_t s = sizeof(addr);
+	if (getsockname(fd, (struct sockaddr *)&addr, &s) == -1) {
 		err_printf("getsockname(): %s\n", strerror(errno));
 		return 0;
 	}
-	
-	sin = (struct sockaddr_in *)&addr;
-
 	for (v = xconnect.vhost; v; v = v->next)
-		if (v->addr->sin_addr.s_addr == sin->sin_addr.s_addr)
+		if (v->addr && v->addrlen == s && memcmp(v->addr, &addr, s) == 0)
 			return v;
-
 	return 0;
 }
 
@@ -2034,7 +2001,7 @@ int get_vhosts(void)
 				ADVANCE(cp, info.rti_info[i]->sa_len);	
 			}
 
-			if (get_vhost_add(((struct sockaddr_in *)info.rti_info[RTAX_IFA])->sin_addr))
+			if (get_vhost_add_sa((struct sockaddr *)info.rti_info[RTAX_IFA], info.rti_info[RTAX_IFA]->sa_len))
 				total++;
 			
 			addrcount--;
@@ -2106,7 +2073,7 @@ int get_vhosts(void)
 	while (ifp < end) {
 		if (ioctl(s, SIOCGIFFLAGS, ifp) > -1 && \
 				x_strncmp(ifp->ifr_name, "lo", 2) && (ifp->ifr_flags & IFF_UP) && \
-					get_vhost_add(((struct sockaddr_in *)&ifp->ifr_addr)->sin_addr))
+					get_vhost_add_sa((struct sockaddr *)&ifp->ifr_addr, sizeof(struct sockaddr_in)))
 						total++;
 		ifp++;
 	}
@@ -2128,7 +2095,7 @@ int get_vhosts(void)
 			err_printf("get_vhosts()->strdup(): %s\n", strerror(errno));
 			return -1;
 		}
-		if (!add_vhost(buf, sin)) {
+		if (!add_vhost(buf, (struct sockaddr *)sin, sizeof(struct sockaddr_in))) {
 			free(buf); free(sin);
 			return -1;
 		}
@@ -2137,14 +2104,14 @@ int get_vhosts(void)
 	return total;
 }
 #endif
-int get_vhost_add(struct in_addr ia) {
+int get_vhost_add_sa(const struct sockaddr *sa, socklen_t salen) {
 	struct hostent *host;
 	struct sockaddr_in *addr;
 	int s;
 	char *hname;
 
 	// resolwujemy
-	host = gethostbyaddr((char *)&ia, sizeof(struct in_addr), AF_INET);
+	host = gethostbyaddr(sa, salen, AF_INET);
 	if (host == 0) {
 		//hname = inet_ntoa(ifpaddr->sin_addr);
 		return 0; // nie resolwuje sie, pewnie z +r wejdzie
@@ -2155,7 +2122,7 @@ int get_vhost_add(struct in_addr ia) {
 
 	hname = strdup(hname);
 	if (hname == 0) {
-		err_printf("get_vhost_add()->strdup(): %s\n", strerror(errno));
+		err_printf("get_vhost_add_sa()->strdup(): %s\n", strerror(errno));
 		return 0;
 	}
 	
@@ -2168,18 +2135,18 @@ int get_vhost_add(struct in_addr ia) {
 
 	s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (s == -1) {
-		err_printf("get_vhost_add()->socket(): %s\n", strerror(errno));
+		err_printf("get_vhost_add_sa()->socket(): %s\n", strerror(errno));
 		free(hname); free(addr);
 		return 0;
 	}
 
 	memset((char *)addr, 0, sizeof(struct sockaddr_in));
-	memcpy(&addr->sin_addr, &ia, sizeof(ia));
+	memcpy(&addr->sin_addr, &sa->sa_data, sizeof(struct in_addr));
 	addr->sin_family = AF_INET;
 
 	if (!bind(s, (struct sockaddr *)addr, sizeof(struct sockaddr))) {
 		close(s);
-		if (add_vhost(hname, addr))
+		if (add_vhost(hname, (struct sockaddr *)addr, sizeof(struct sockaddr_in)))
 			return 1;
 		else {
 			free(hname); free(addr);
