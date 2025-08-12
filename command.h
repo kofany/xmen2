@@ -6,8 +6,8 @@
 #define DEF_IRCPORT 	6667
 #define DEF_TAKEMODE	1 // 0 = deop, 1 = kick, 2 = close(kick)
 
-#define logit(c...) { 	gettimeofday(&tv_log, 0); 			\
-			tm_log = localtime((time_t *)&tv_log.tv_sec);		\
+#define logit(c...) { 	gettimeofday(&tv_log, 0); 				\
+			tm_log = localtime((time_t *)&tv_log.tv_sec);			\
 			xsendint = strftime(buf, XBSIZE, "%X", tm_log);	\
 			xsendint += snprintf(buf+xsendint, XBSIZE-xsendint, ".%.6ld ", tv_log.tv_usec);	\
 			xsendint += snprintf(buf+xsendint, XBSIZE-xsendint, c); 			\
@@ -18,27 +18,29 @@ typedef struct xaddress_t xaddress;
 
 struct vhosts_t {
 	char *name;
-	struct sockaddr_in *addr;
+	struct sockaddr_storage *addr;
+	socklen_t addrlen;
 	vhost *next, *parent;
 };
 
 struct xaddress_t {
 	char *ircserver, *ident_file, *ident_org, *log_file;
 	int ircport, delay, timer, connecting, ident_oidentd2, log_fd;
-	struct sockaddr_in addr, bncaddr;
+	struct sockaddr_storage addr, bncaddr;
+	socklen_t addrlen, bncaddrlen;
 	vhost *vhost, *vhosttail;
 	char *bncserver, *bncpass; int bncport;
 };
 
 extern xaddress xconnect;
 extern struct timeval tv_ping, tv_log;
-struct tm *tm_log;
+extern struct tm *tm_log;
 extern double cping;
 extern int def_takemode, xlastjoin, xrejointimer, xrejoindelay;
 extern const char xalphaf[], xalpha[], xcrapf[], xcrap[], xident[];
 extern const float lxalpf, lxalp, lxcrapf, lxcrap, lxident;
 
-vhost *add_vhost(char *, struct sockaddr_in *);
+vhost *add_vhost(char *, const struct sockaddr *, socklen_t);
 vhost *find_vhost_by_name(char *);
 vhost *find_vhost_by_fd(int);
 void del_vhost_all(void);
@@ -46,7 +48,7 @@ void del_vhost(vhost *, int);
 char *next_bnc(void);
 struct sockaddr *next_vhost(void);
 int get_vhosts(void);
-int get_vhost_add(struct in_addr);
+int get_vhost_add_sa(const struct sockaddr *, socklen_t);
 
 void delete_connect_all(void);
 

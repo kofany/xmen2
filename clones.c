@@ -78,7 +78,9 @@ xmen *new_clone(void)
 		return 0;
 	}
 
-	if ((p->fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
+	int af = xconnect.bncserver ? xconnect.bncaddr.ss_family : xconnect.addr.ss_family;
+	if (af != AF_INET && af != AF_INET6) af = AF_INET;
+	if ((p->fd = socket(af, SOCK_STREAM, IPPROTO_TCP)) == -1) {
 		err_printf("new_clone()->socket(): %s\n", strerror(errno));
 		if (root == p)
 			root = tail = 0;

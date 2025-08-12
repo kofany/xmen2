@@ -71,6 +71,7 @@ int	hsock,
  */
 #include "xmen.info"
 char	buf[XBSIZE], read_buf[XBSIZE_READ], *read_ptr, *read_str;
+struct tm *tm_log;
 #include "xmen.realnames"
 
 #ifdef _USE_POLL
